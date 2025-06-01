@@ -1,0 +1,105 @@
+version: "3.8" # Specifies the Docker Compose file format version. Using 3.8 for good compatibility.
+
+services: # This block defines all the individual services (containers) that make up your application.
+
+  ### === DEVELOPMENT SERVICES ===
+  # These services are configured for a development workflow, allowing for live code changes (hot-reloading)
+  # and easy debugging.
+
+  backend-dev: # Defines the Node.js Express backend service for development.
+    build: # Instructions for building the Docker image for this service.
+      context: . # Looks for the Dockerfile in the current directory (root of your project).
+      dockerfile: backend/dockerfile.backend # Specifies the path to the Dockerfile for the backend.
+      target: dev # Uses the 'dev' stage defined in your Dockerfile (should include node_modules and dev dependencies).
+    volumes: # Mounts for persistent data and live code synchronization.
+      - ./backend:/app # Binds the local 'backend' directory to '/app' inside the container.
+                       # This means changes you make to your local backend code are instantly reflected in the container.
+      - /app/node_modules # Explicitly tells Docker *not* to mount the host's node_modules over the container's.
+                          # This is crucial for performance and preventing issues with different OS architectures.
+    ports: # Maps ports from the container to your host machine.
+      - "3000:3000" # Maps host port 3000 to container port 3000. Your backend will be accessible at http://localhost:3000.
+    environment: # Environment variables passed into the container.
+      - NODE_ENV=development # Sets the Node.js environment to development.
+      - MONGO_URI=mongodb://db-dev:27017/mern-dev # Connection string for the development MongoDB.
+                                                  # 'db-dev' is the service name, which Docker Compose resolves to the container's IP.
+      - PORT=3000 # The port your Node.js application listens on inside the container.
+    depends_on: # Ensures this service starts only after its dependencies are ready.
+      - db-dev # backend-dev needs the db-dev database to be running.
+
+  frontend-dev: # Defines the React frontend service for development.
+    build:
+      context: .
+      dockerfile: frontend/dockerfile.frontend # Specifies the path to the Dockerfile for the frontend.
+      target: dev # Uses the 'dev' stage in your frontend Dockerfile (likely for a dev server like Vite/Webpack).
+    volumes:
+      - ./frontend:/app # Binds the local 'frontend' directory to '/app' inside the container for live code changes.
+      - /app/node_modules # Prevents host's node_modules from interfering.
+    ports:
+      - "5173:5173" # Maps host port 5173 to container port 5173. Your frontend will be accessible at http://localhost:5173.
+                   # This is a common port for Vite.
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:3000 # Critical for frontend to know where its backend API is.
+                                               # In development, both frontend and backend are accessed via localhost ports on the host.
+    depends_on:
+      - backend-dev # frontend-dev needs the backend to be running to make API calls.
+
+  db-dev: # Defines the MongoDB database service for development.
+    image: mongo:6.0 # Uses the official MongoDB 6.0 Docker image.
+    ports:
+      - "27017:27017" # Maps host port 27017 to container port 27017. Allows you to access MongoDB directly from your host
+                      # (e.g., with a GUI tool like MongoDB Compass) during development.
+    volumes:
+      - mern_dev_db:/data/db # Mounts the named volume 'mern_dev_db' to the MongoDB data directory inside the container.
+                             # This ensures your development database data persists even if the container is removed.
+
+  ### === PRODUCTION SERVICES ===
+  # These services are configured for a production deployment, focusing on efficiency, stability, and security.
+  # Images are typically smaller and built for optimal performance.
+
+  backend-prod: # Defines the Node.js Express backend service for production.
+    build:
+      context: .
+      dockerfile: backend/dockerfile.backend
+      target: prod # Uses the 'prod' stage in your backend Dockerfile (likely creates a smaller image with only prod dependencies).
+    ports:
+      - "3000:3000" # IMPORTANT: Maps host port 4000 to container port 3000.
+                   # Changed from 3000 to 4000 to avoid conflict if both dev and prod backends are run simultaneously.
+                   # Your production backend will be accessible at http://localhost:4000 from your host.
+    environment:
+      - NODE_ENV=production # Sets the Node.js environment to production.
+      - MONGO_URI=mongodb://db-prod:27017/mern-prod # Connection string for the production MongoDB.
+      - PORT=3000 # The port your Node.js application listens on inside the container.
+    depends_on:
+      - db-prod # backend-prod needs the db-prod database.
+
+  frontend-prod: # Defines the Nginx (or similar) static file server for your production React build.
+    build:
+      context: .
+      dockerfile: frontend/dockerfile.frontend # Specifies the path to the Dockerfile for the frontend (production build).
+      target: prod # Uses the 'prod' stage (likely builds the React app and sets up Nginx to serve it).
+    ports:
+      - "8080:80" # Maps host port 8080 to container port 80 (standard HTTP port for Nginx).
+                 # Your production frontend will be accessible at http://localhost:8080.
+    environment:
+      - NODE_ENV=production
+      # CRITICAL CORRECTION for CORS issue:
+      # This tells your frontend React app where to make API calls when it's running in the *browser*.
+      # The browser is on your host machine, so it needs to use the host's port for the backend.
+      - REACT_APP_API_URL=http://localhost:4000 # Points to the backend-prod service via the host's exposed port.
+    depends_on:
+      - backend-prod # frontend-prod needs the backend to be running for API calls.
+
+  db-prod: # Defines the MongoDB database service for production.
+    image: mongo:6.0 # Uses the official MongoDB 6.0 Docker image.
+    # ports: # COMMENTED OUT: In production, it's generally more secure not to expose your database port directly to the host
+             # unless you have a specific monitoring or management tool that needs direct access.
+             # Your backend-prod service can connect to db-prod internally within the Docker network using its service name 'db-prod'.
+    #  - "27018:27017" # If uncommented, maps host port 27018 to container port 27017 to avoid conflict with db-dev.
+    volumes:
+      - mern_prod_db:/data/db # Mounts the named volume 'mern_prod_db' to persist production database data.
+
+volumes: # Defines named volumes. These volumes are managed by Docker and store data persistently,
+         # even if containers are removed. They are specifically used for your databases.
+  mern_dev_db: # Named volume for the development MongoDB.
+  mern_prod_db: # Named volume for the production MongoDB.

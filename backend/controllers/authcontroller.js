@@ -67,12 +67,14 @@ const loginUser = async (req, res) => {
         const { email, password } = req.body
         const user = await User.findOne({ email })
         if (!user) {
+            console.log(user);
             return res.status(404).json({ message: "invalid email or password" })
         }
         //compare password
         const isMatched = await bcrypt.compare(password, user.password)
         if (!isMatched) {
             return res.status(404).json({ message: "bad credential" })
+            console.log(isMatched);
         }
         //Return user data with jwt //
 
@@ -83,8 +85,12 @@ const loginUser = async (req, res) => {
             profileImageUrl: user.profileImageUrl,
 
             token: generatetoken(user._id)
+
+
+
         })
-        
+
+
     }
     catch (error) {
 

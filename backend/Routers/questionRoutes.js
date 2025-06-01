@@ -1,7 +1,7 @@
 import express from 'express'
 
 import { togglePinQuestion, updateQuestionNote, addQuestionsToSession } from '../controllers/questioncontroller.js'
-import protect from '../Middleware/authMiddleware.js'
+
 
 
 

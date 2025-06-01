@@ -272,4 +272,4 @@ const InterviewPrep = () => {
   );
 };
 
-export default InterviewPrep; Remove-Item -Recurse -Force .git
+export default InterviewPrep; 

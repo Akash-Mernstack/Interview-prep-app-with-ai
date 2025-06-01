@@ -10,9 +10,10 @@ import questionRoutes from './Routers/questionRoutes.js'
 import protect from './Middleware/authMiddleware.js'
 import { generateInterviewQuestion, generateConceptExplanation } from './controllers/aicontroller.js'
 
+
+
 // Load environment variables
 dotenv.config()
-
 const app = express()
 
 // Middleware to handle CORS
@@ -45,7 +46,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 
 // Start server
-const Port = process.env.PORT || 8000  // also make sure it's 'PORT', not 'Port' in .env
+const Port = process.env.PORT || 8000
 
 app.listen(Port, () => {
     console.log(`Server is listening on port ${Port}`);
