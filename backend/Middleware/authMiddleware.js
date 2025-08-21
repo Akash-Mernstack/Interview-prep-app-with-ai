@@ -4,7 +4,6 @@ import { configDotenv } from "dotenv";
 configDotenv()
 const Jwt_secret = process.env.JWT_SECRET
 
-
 //Middleware to protect routes//
 const protect = async (req, res, next) => {
     try {
