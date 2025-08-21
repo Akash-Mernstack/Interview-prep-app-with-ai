@@ -3,7 +3,7 @@ FROM node:22-alpine AS dev
 
 WORKDIR /app
 
-COPY backend/package.json backend/package-lock.json ./
+COPY backend/package*.json ./
 RUN npm install
 
 COPY backend/. ./
@@ -11,15 +11,13 @@ COPY backend/. ./
 CMD ["npx", "nodemon", "server.js"]
 
 # Production Stage
-# Production Stage
 FROM node:22-alpine AS prod
 
 WORKDIR /app
 
-COPY backend/package.json backend/package-lock.json ./
-# Skips dev dependencies
+COPY backend/package*.json ./
 RUN npm install --omit=dev
 
-COPY --from=dev /app ./
+COPY backend/. ./
 
 CMD ["node", "server.js"]
